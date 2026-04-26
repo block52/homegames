@@ -123,7 +123,7 @@ function CreateGameModal({ onClose, onCreated }: { onClose: () => void; onCreate
     const [seats, setSeats] = useState("9");
     const [minBuyIn, setMinBuyIn] = useState("");
     const [maxBuyIn, setMaxBuyIn] = useState("");
-    const [location, setLocation] = useState("");
+    const [address, setAddress] = useState("");
     const [contact, setContact] = useState("");
     const [rules, setRules] = useState("");
     const [error, setError] = useState<string | null>(null);
@@ -149,7 +149,7 @@ function CreateGameModal({ onClose, onCreated }: { onClose: () => void; onCreate
             const startTs = Math.floor(startDate!.getTime() / 1000);
             const expiresAt = startTs + 6 * 60 * 60; // listing drops 6h after start
             const exactTime = startDate!.toLocaleString();
-            const hasPrivate = location || contact || rules;
+            const hasPrivate = address || contact || rules;
             await window.homegames.games.create({
                 publicData: {
                     gameType,
@@ -161,7 +161,7 @@ function CreateGameModal({ onClose, onCreated }: { onClose: () => void; onCreate
                     maxBuyIn: maxBuyIn ? parseInt(maxBuyIn, 10) : undefined
                 },
                 privateData: hasPrivate ? {
-                    location,
+                    address,
                     exactTime,
                     hostContact: contact,
                     houseRules: rules || undefined
@@ -230,8 +230,8 @@ function CreateGameModal({ onClose, onCreated }: { onClose: () => void; onCreate
                         Private details (optional, encrypted to trusted players only). Exact start time is encrypted automatically.
                     </div>
                     <div className="field">
-                        <label>Location</label>
-                        <input value={location} onChange={(e) => setLocation(e.target.value)} />
+                        <label>Address</label>
+                        <input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="123 Main St, Apt 4B" />
                     </div>
                     <div className="field">
                         <label>Host contact</label>
@@ -339,7 +339,7 @@ function GameDetailModal({
                         {detail.privateData ? (
                             <div className="card">
                                 <div style={{ color: "var(--success)", fontSize: 12, marginBottom: 8 }}>✓ Private details (decrypted)</div>
-                                <div className="row"><div className="label">Location</div><div>{detail.privateData.location}</div></div>
+                                <div className="row"><div className="label">Address</div><div>{detail.privateData.address}</div></div>
                                 <div className="row"><div className="label">Time</div><div>{detail.privateData.exactTime}</div></div>
                                 <div className="row"><div className="label">Contact</div><div>{detail.privateData.hostContact}</div></div>
                                 {detail.privateData.houseRules && <div className="row"><div className="label">Rules</div><div>{detail.privateData.houseRules}</div></div>}

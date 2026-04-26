@@ -100,7 +100,7 @@ export function registerGameCommands(program: Command): void {
         .option("--day <day>", "Day of week, e.g. 'Friday'")
         .option("--seats <n>", "Seats available")
         .option("--days-active <n>", "Days until the listing expires", "7")
-        .option("--location <location>", "Private location detail (encrypted to trusted players)")
+        .option("--address <address>", "Private street address (encrypted to trusted players)")
         .option("--time <time>", "Private exact time (encrypted)")
         .option("--contact <contact>", "Private host contact (encrypted)")
         .option("--rules <rules>", "Private house rules (encrypted)")
@@ -150,9 +150,9 @@ export function registerGameCommands(program: Command): void {
             };
 
             const privateData: GamePrivateData | undefined =
-                options.location || options.time || options.contact || options.rules
+                options.address || options.time || options.contact || options.rules
                     ? {
-                          location: options.location || "",
+                          address: options.address || "",
                           exactTime: options.time || "",
                           hostContact: options.contact || "",
                           houseRules: options.rules
@@ -357,7 +357,7 @@ export function registerGameCommands(program: Command): void {
 
                 console.log();
                 output.heading("Private Details");
-                console.log(`Location:      ${privateData.location}`);
+                console.log(`Address:       ${privateData.address}`);
                 console.log(`Exact Time:    ${privateData.exactTime}`);
                 console.log(`Contact:       ${privateData.hostContact}`);
                 if (privateData.houseRules) console.log(`House Rules:   ${privateData.houseRules}`);

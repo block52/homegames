@@ -13,7 +13,7 @@ export interface GamePublicData {
 }
 
 export interface GamePrivateData {
-    location: string;
+    address: string;
     exactTime: string;
     hostContact: string;
     houseRules?: string;
