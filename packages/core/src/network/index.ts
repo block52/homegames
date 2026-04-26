@@ -21,5 +21,8 @@ export { MessageHandler } from "./message-handler.js";
 // Peer Manager
 export { PeerManager } from "./peer-manager.js";
 
+// Game Network Handler
+export { GameNetworkHandler } from "./game-handler.js";
+
 // Network Service
 export { NetworkService } from "./service.js";

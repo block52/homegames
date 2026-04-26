@@ -17,8 +17,18 @@ import {
     PeerAnnounce,
     PeerDiscover
 } from "../types/message.js";
+import { GameListing, RSVPRequest } from "../types/index.js";
 import { PlayerRepository } from "../storage/repositories/players.js";
 import { timestampNow } from "../crypto/utils.js";
+
+export interface GameDelistPayload {
+    listingId: string;
+}
+
+export interface SignedRSVPPayload {
+    rsvp: RSVPRequest;
+    signature: string;
+}
 
 export interface MessageHandlerEvents {
     message: (envelope: MessageEnvelope, stream: SAMStream) => void;
@@ -26,8 +36,10 @@ export interface MessageHandlerEvents {
     peer_discover: (request: PeerDiscover, stream: SAMStream) => void;
     vouch_create: (payload: unknown, stream: SAMStream) => void;
     vouch_revoke: (payload: unknown, stream: SAMStream) => void;
-    game_list: (payload: unknown, stream: SAMStream) => void;
-    game_delist: (payload: unknown, stream: SAMStream) => void;
+    game_list: (listing: GameListing, envelope: MessageEnvelope, stream: SAMStream) => void;
+    game_delist: (payload: GameDelistPayload, envelope: MessageEnvelope, stream: SAMStream) => void;
+    rsvp_request: (payload: SignedRSVPPayload, envelope: MessageEnvelope, stream: SAMStream) => void;
+    rsvp_response: (payload: SignedRSVPPayload, envelope: MessageEnvelope, stream: SAMStream) => void;
     direct_message: (payload: unknown, stream: SAMStream) => void;
     error: (err: Error, stream?: SAMStream) => void;
 }
@@ -117,6 +129,29 @@ export class MessageHandler extends EventEmitter {
         return this.createEnvelope(MessageType.PEER_DISCOVER, payload);
     }
 
+    async createGameListMessage(listing: GameListing): Promise<MessageEnvelope> {
+        return this.createEnvelope(MessageType.GAME_LIST, listing);
+    }
+
+    async createGameDelistMessage(listingId: string): Promise<MessageEnvelope> {
+        const payload: GameDelistPayload = { listingId };
+        return this.createEnvelope(MessageType.GAME_DELIST, payload);
+    }
+
+    async createRSVPRequestMessage(
+        signed: SignedRSVPPayload,
+        toFingerprint: string
+    ): Promise<MessageEnvelope> {
+        return this.createEnvelope(MessageType.RSVP_REQUEST, signed, toFingerprint);
+    }
+
+    async createRSVPResponseMessage(
+        signed: SignedRSVPPayload,
+        toFingerprint: string
+    ): Promise<MessageEnvelope> {
+        return this.createEnvelope(MessageType.RSVP_RESPONSE, signed, toFingerprint);
+    }
+
     /**
      * Send a message over a stream
      */
@@ -161,7 +196,7 @@ export class MessageHandler extends EventEmitter {
 
             // Parse and emit type-specific event
             const payload = JSON.parse(envelope.payload);
-            this.emitTypedEvent(envelope.type, payload, stream);
+            this.emitTypedEvent(envelope.type, payload, envelope, stream);
 
         } catch (err) {
             this.emit("error", err as Error, stream);
@@ -297,7 +332,12 @@ export class MessageHandler extends EventEmitter {
     /**
      * Emit typed event based on message type
      */
-    private emitTypedEvent(type: MessageType, payload: unknown, stream: SAMStream): void {
+    private emitTypedEvent(
+        type: MessageType,
+        payload: unknown,
+        envelope: MessageEnvelope,
+        stream: SAMStream
+    ): void {
         switch (type) {
             case MessageType.PEER_ANNOUNCE:
                 this.emit("peer_announce", payload as PeerAnnounce, stream);
@@ -312,10 +352,16 @@ export class MessageHandler extends EventEmitter {
                 this.emit("vouch_revoke", payload, stream);
                 break;
             case MessageType.GAME_LIST:
-                this.emit("game_list", payload, stream);
+                this.emit("game_list", payload as GameListing, envelope, stream);
                 break;
             case MessageType.GAME_DELIST:
-                this.emit("game_delist", payload, stream);
+                this.emit("game_delist", payload as GameDelistPayload, envelope, stream);
+                break;
+            case MessageType.RSVP_REQUEST:
+                this.emit("rsvp_request", payload as SignedRSVPPayload, envelope, stream);
+                break;
+            case MessageType.RSVP_RESPONSE:
+                this.emit("rsvp_response", payload as SignedRSVPPayload, envelope, stream);
                 break;
             case MessageType.DIRECT_MESSAGE:
                 this.emit("direct_message", payload, stream);

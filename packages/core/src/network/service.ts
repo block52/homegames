@@ -11,10 +11,15 @@ import { I2PManager } from "./i2p.js";
 import { SAMStream } from "./stream-connection.js";
 import { MessageHandler } from "./message-handler.js";
 import { PeerManager } from "./peer-manager.js";
+import { GameNetworkHandler } from "./game-handler.js";
 import { DestinationStore } from "./destination-store.js";
 import { NetworkStatus, I2PConfig, DEFAULT_I2P_CONFIG, BootstrapPeer } from "./types.js";
 import { PlayerRepository } from "../storage/repositories/players.js";
+import { GameRepository } from "../storage/repositories/games.js";
+import { RSVPRepository } from "../storage/repositories/rsvps.js";
 import { ConfigRepository } from "../storage/repositories/config.js";
+import { GameService } from "../game/listing.js";
+import { RSVPService } from "../game/rsvp.js";
 import { Player } from "../types/identity.js";
 import type Database from "better-sqlite3";
 
@@ -40,6 +45,7 @@ export class NetworkService extends EventEmitter {
     private i2pManager: I2PManager | null = null;
     private messageHandler: MessageHandler | null = null;
     private peerManager: PeerManager | null = null;
+    private gameNetworkHandler: GameNetworkHandler | null = null;
 
     private localFingerprint: string | null = null;
     private privateKey: openpgp.PrivateKey | null = null;
@@ -143,6 +149,37 @@ export class NetworkService extends EventEmitter {
         }
 
         this.messageHandler = null;
+        this.gameNetworkHandler = null;
+    }
+
+    /**
+     * Attach game-listing networking. Call after start() with the
+     * GameService and RSVPService that share the same DB. The handler
+     * subscribes to MessageHandler and PeerManager events; broadcast
+     * methods become available immediately.
+     */
+    attachGameHandler(gameService: GameService, rsvpService: RSVPService): GameNetworkHandler {
+        if (!this.messageHandler || !this.peerManager) {
+            throw new Error("Network service not started. Call start() first.");
+        }
+        if (this.gameNetworkHandler) return this.gameNetworkHandler;
+
+        const gameRepo = new GameRepository(this.db);
+        const rsvpRepo = new RSVPRepository(this.db);
+
+        this.gameNetworkHandler = new GameNetworkHandler(
+            this.messageHandler,
+            this.peerManager,
+            gameService,
+            rsvpService,
+            gameRepo,
+            rsvpRepo
+        );
+        return this.gameNetworkHandler;
+    }
+
+    getGameNetworkHandler(): GameNetworkHandler | null {
+        return this.gameNetworkHandler;
     }
 
     /**

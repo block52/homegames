@@ -243,6 +243,20 @@ export class PeerManager extends EventEmitter {
     }
 
     /**
+     * Get the SAMStream for a connected peer, if any
+     */
+    getStream(fingerprint: string): SAMStream | null {
+        return this.streams.get(fingerprint) || null;
+    }
+
+    /**
+     * Get all currently-open peer streams
+     */
+    getAllStreams(): SAMStream[] {
+        return Array.from(this.streams.values());
+    }
+
+    /**
      * Disconnect from a peer
      */
     disconnect(fingerprint: string): void {
