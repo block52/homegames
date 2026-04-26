@@ -15,6 +15,8 @@ import { GameRepository } from "../storage/repositories/games.js";
 import { RSVPRepository } from "../storage/repositories/rsvps.js";
 import { GameService } from "../game/listing.js";
 import { RSVPService } from "../game/rsvp.js";
+import { signObject } from "../crypto/sign.js";
+import { Keyring } from "../crypto/keyring.js";
 import { GameListing, MessageEnvelope, RSVPRequest } from "../types/index.js";
 import { isExpired } from "../crypto/utils.js";
 
@@ -33,7 +35,8 @@ export class GameNetworkHandler extends EventEmitter {
         private gameService: GameService,
         private rsvpService: RSVPService,
         private gameRepo: GameRepository,
-        private rsvpRepo: RSVPRepository
+        private rsvpRepo: RSVPRepository,
+        private keyring: Keyring
     ) {
         super();
         this.subscribe();
@@ -56,9 +59,28 @@ export class GameNetworkHandler extends EventEmitter {
             this.handleRSVPResponse(payload).catch((err) => this.emit("error", err));
         });
 
-        this.peerManager.on("peerConnected", (_fingerprint, stream) => {
+        this.peerManager.on("peerConnected", (fingerprint, stream) => {
             this.rebroadcastActiveListings(stream).catch((err) => this.emit("error", err));
+            this.flushPendingRSVPs(fingerprint).catch((err) => this.emit("error", err));
         });
+    }
+
+    private async flushPendingRSVPs(connectedFingerprint: string): Promise<void> {
+        const myFingerprint = this.keyring.getFingerprint();
+        if (!myFingerprint) return;
+
+        const privateKey = this.keyring.getPrivateKey();
+        if (!privateKey) return;
+
+        const pending = this.rsvpRepo.getPendingByPlayer(myFingerprint);
+        for (const rsvp of pending) {
+            const listing = this.gameRepo.getById(rsvp.gameListingId);
+            if (!listing || listing.hostFingerprint !== connectedFingerprint) continue;
+
+            const payload: Record<string, unknown> = { ...rsvp };
+            const { signature } = await signObject(payload, privateKey);
+            await this.sendRSVPRequest({ rsvp, signature }, listing.hostFingerprint);
+        }
     }
 
     async broadcastListing(listing: GameListing): Promise<void> {

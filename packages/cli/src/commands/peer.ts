@@ -5,6 +5,13 @@ import {
     PlayerRepository,
     LocalIdentityRepository,
     ConfigRepository,
+    VouchRepository,
+    GameRepository,
+    RSVPRepository,
+    Keyring,
+    TrustEngine,
+    GameService,
+    RSVPService,
     normalizeFingerprint,
     decryptSymmetric,
     NetworkService,
@@ -236,6 +243,21 @@ export function registerPeerCommands(program: Command): void {
                 });
 
                 await networkService.start();
+
+                // Attach game-handler so active listings broadcast on each new
+                // peer connection and pending RSVPs flush to their hosts.
+                const keyring = new Keyring();
+                await keyring.unlockKey(privateKeyArmored, passphrase);
+                await keyring.loadPublicKey(localIdentity.publicKey);
+
+                const playerRepo = new PlayerRepository(db.getConnection());
+                const vouchRepo = new VouchRepository(db.getConnection());
+                const gameRepo = new GameRepository(db.getConnection());
+                const rsvpRepo = new RSVPRepository(db.getConnection());
+                const trustEngine = new TrustEngine(vouchRepo, playerRepo);
+                const gameService = new GameService(gameRepo, playerRepo, trustEngine, keyring);
+                const rsvpService = new RSVPService(rsvpRepo, gameRepo, playerRepo, keyring);
+                networkService.attachGameHandler(gameService, rsvpService, keyring);
 
                 const destination = networkService.getDestination();
 

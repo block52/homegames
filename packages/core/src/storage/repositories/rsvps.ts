@@ -82,4 +82,12 @@ export class RSVPRepository {
         const result = stmt.run(gameListingId);
         return result.changes;
     }
+
+    getPendingByPlayer(playerFingerprint: string): RSVPRequest[] {
+        const stmt = this.db.prepare(
+            "SELECT * FROM rsvps WHERE player_fingerprint = ? AND status = 'pending' ORDER BY timestamp ASC"
+        );
+        const rows = stmt.all(playerFingerprint) as RSVPRow[];
+        return rows.map(rowToRSVP);
+    }
 }

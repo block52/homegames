@@ -20,6 +20,7 @@ import { RSVPRepository } from "../storage/repositories/rsvps.js";
 import { ConfigRepository } from "../storage/repositories/config.js";
 import { GameService } from "../game/listing.js";
 import { RSVPService } from "../game/rsvp.js";
+import { Keyring } from "../crypto/keyring.js";
 import { Player } from "../types/identity.js";
 import type Database from "better-sqlite3";
 
@@ -158,7 +159,11 @@ export class NetworkService extends EventEmitter {
      * subscribes to MessageHandler and PeerManager events; broadcast
      * methods become available immediately.
      */
-    attachGameHandler(gameService: GameService, rsvpService: RSVPService): GameNetworkHandler {
+    attachGameHandler(
+        gameService: GameService,
+        rsvpService: RSVPService,
+        keyring: Keyring
+    ): GameNetworkHandler {
         if (!this.messageHandler || !this.peerManager) {
             throw new Error("Network service not started. Call start() first.");
         }
@@ -173,7 +178,8 @@ export class NetworkService extends EventEmitter {
             gameService,
             rsvpService,
             gameRepo,
-            rsvpRepo
+            rsvpRepo,
+            keyring
         );
         return this.gameNetworkHandler;
     }
