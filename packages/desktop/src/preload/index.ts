@@ -1,0 +1,30 @@
+import { contextBridge, ipcRenderer } from "electron";
+import type { HomeGamesAPI } from "../shared/api.js";
+
+const api: HomeGamesAPI = {
+    identity: {
+        get: () => ipcRenderer.invoke("identity:get"),
+        create: (params) => ipcRenderer.invoke("identity:create", params)
+    },
+    keyring: {
+        unlock: (passphrase) => ipcRenderer.invoke("keyring:unlock", passphrase),
+        lock: () => ipcRenderer.invoke("keyring:lock"),
+        status: () => ipcRenderer.invoke("keyring:status")
+    },
+    peers: {
+        list: () => ipcRenderer.invoke("peers:list")
+    },
+    vouches: {
+        listMine: () => ipcRenderer.invoke("vouches:listMine"),
+        create: (fp, level, note) => ipcRenderer.invoke("vouches:create", fp, level, note)
+    },
+    games: {
+        list: (filters) => ipcRenderer.invoke("games:list", filters),
+        create: (params) => ipcRenderer.invoke("games:create", params),
+        show: (listingId) => ipcRenderer.invoke("games:show", listingId),
+        rsvp: (listingId) => ipcRenderer.invoke("games:rsvp", listingId),
+        cancel: (listingId) => ipcRenderer.invoke("games:cancel", listingId)
+    }
+};
+
+contextBridge.exposeInMainWorld("homegames", api);
