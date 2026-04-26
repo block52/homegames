@@ -154,11 +154,47 @@ yarn clean
 - [x] Message signing and verification
 - [x] Persistent I2P destinations
 
-### Phase 3 (Planned)
-- [ ] Game listing & discovery
-- [ ] Encrypted game details
-- [ ] Electron desktop app
-- [ ] Real-time game updates
+### Phase 3 — Game Listings (Not started)
+
+All `game` CLI commands are currently stubs that print a "not implemented" warning. The `games` and `rsvps` SQLite tables exist (see `packages/core/src/storage/migrations/001_initial.ts`) but have no repository wrappers.
+
+Concrete work required:
+
+- [ ] **Core: game module** (`packages/core/src/game/`)
+  - [ ] `listing.ts` — build/sign `GameListing` from `GamePublicData` + `GamePrivateData`; deterministic `listingId` (hash of public data + host fingerprint + createdAt)
+  - [ ] `encrypt.ts` — encrypt `GamePrivateData` to the public keys of all currently-trusted players (≥3 vouches); re-encrypt when trust set changes
+  - [ ] `search.ts` — apply `GameFilters` over local game cache
+  - [ ] `rsvp.ts` — create/sign `RSVPRequest`, accept/decline flow
+- [ ] **Core: storage repositories** (`packages/core/src/storage/repositories/`)
+  - [ ] `games.ts` — CRUD for the `games` table, expiry pruning
+  - [ ] `rsvps.ts` — CRUD for the `rsvps` table
+- [ ] **Core: network integration** (extend `packages/core/src/network/message-handler.ts`)
+  - [ ] Handle `GAME_LIST`, `GAME_DELIST`, `RSVP_REQUEST`, `RSVP_RESPONSE` (types already declared in `types/message.ts`)
+  - [ ] Verify host signature + reject expired listings
+  - [ ] Re-broadcast known listings to new peers on connect
+- [ ] **CLI: wire up `game.ts`** (`packages/cli/src/commands/game.ts`)
+  - [ ] `game create` — interactive prompt for stakes/type/area/location, calls core
+  - [ ] `game list` — applies `--type` / `--stakes` / `--area` filters
+  - [ ] `game show <id>` — decrypts private data if user is trusted
+  - [ ] `game rsvp <id>` — sends RSVP to host
+  - [ ] `game cancel <id>` — broadcasts `GAME_DELIST`
+- [ ] **Tests** — none currently exist (`yarn test` runs nothing). Add at minimum:
+  - [ ] Vouch signature round-trip + trust calculation edge cases
+  - [ ] Game listing encrypt → decrypt with/without sufficient trust
+  - [ ] Message envelope sign/verify
+
+### Phase 4 — Desktop UI (Not started)
+
+- [ ] `packages/desktop/` — Electron + React app per `ARCHITECTURE.md`
+- [ ] Real-time game updates (subscribe to network events)
+- [ ] Trust graph visualization
+- [ ] Notification system for new vouches / RSVPs
+
+### Phase 5 — Hardening (Not started)
+
+- [ ] Anti-Sybil enforcement: 30-day vouch cooling + 10/month limit (documented in README, not enforced in `trust/vouch.ts`)
+- [ ] Key rotation / revocation broadcast
+- [ ] Reproducible builds for CLI distribution
 
 ## License
 
