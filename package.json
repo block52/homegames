@@ -1,0 +1,21 @@
+{
+    "name": "homegames",
+    "version": "0.1.0",
+    "private": true,
+    "packageManager": "yarn@1.22.22",
+    "workspaces": [
+        "packages/*"
+    ],
+    "scripts": {
+        "build": "yarn workspaces run build",
+        "test": "yarn workspaces run test",
+        "lint": "yarn workspaces run lint",
+        "clean": "yarn workspaces run clean"
+    },
+    "devDependencies": {
+        "typescript": "^5.8.2"
+    },
+    "engines": {
+        "node": ">=22.0.0"
+    }
+}
