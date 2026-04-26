@@ -104,6 +104,14 @@ homegames peer connect
 - **30-day cooling period** before you can vouch for others
 - **Maximum 10 vouches per month** to prevent abuse
 
+## Game Listing Encryption
+
+Private game data (location, exact time, host contact, house rules) is encrypted with **OpenPGP multi-recipient encryption** to the public keys of all currently-trusted players (those with ≥3 valid vouches).
+
+OpenPGP natively wraps a single AES session key per recipient and stores the body as one AES-GCM ciphertext, so the blob is one encrypted body plus ~400 bytes per recipient. We re-use the existing `openpgp` dependency rather than introducing libsodium or a custom AGE-style envelope — the underlying construction is the same hybrid scheme, and the per-recipient overhead is negligible at the scale this app targets.
+
+When the host's trust set changes (a new vouch lands, or one is revoked), the listing is re-encrypted to the updated recipient set and re-broadcast.
+
 ## Project Structure
 
 ```

@@ -10,5 +10,8 @@ export * from "./storage/index.js";
 // Trust
 export * from "./trust/index.js";
 
+// Game
+export * from "./game/index.js";
+
 // Network (Phase 2 stubs)
 export * from "./network/index.js";
