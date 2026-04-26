@@ -6,6 +6,8 @@ export interface GamePublicData {
     generalArea: string;
     dayOfWeek?: string;
     seatsAvailable?: number;
+    minBuyIn?: number;
+    maxBuyIn?: number;
     hostFingerprint: string;
     minimumTrustLevel?: number;
 }

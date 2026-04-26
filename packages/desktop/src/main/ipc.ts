@@ -6,7 +6,6 @@ import {
     decryptPrivateData,
     searchListings,
     timestampNow,
-    addDays,
     GamePublicData,
     GameListing
 } from "@homegames/core";
@@ -149,11 +148,13 @@ export function registerIpcHandlers(): void {
             ...params.publicData,
             hostFingerprint: fingerprint
         };
-        const expiresAt = addDays(timestampNow(), Math.max(1, params.daysActive));
+        if (params.expiresAt <= timestampNow()) {
+            throw new Error("Start time must be in the future.");
+        }
         return gameService.createListing({
             publicData,
             privateData: params.privateData,
-            expiresAt
+            expiresAt: params.expiresAt
         });
     });
 

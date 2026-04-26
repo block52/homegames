@@ -24,7 +24,7 @@ export interface CreateIdentityParams {
 export interface CreateGameParams {
     publicData: Omit<GamePublicData, "hostFingerprint">;
     privateData?: GamePrivateData;
-    daysActive: number;
+    expiresAt: number;
 }
 
 export interface SearchResultDTO {

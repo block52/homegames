@@ -6,6 +6,13 @@ import { UnlockModal } from "../components/UnlockModal";
 
 const GAME_TYPES: GameType[] = ["holdem", "omaha", "plo", "mixed", "other"];
 
+function formatBuyIn(min?: number, max?: number): string {
+    if (min === undefined && max === undefined) return "—";
+    if (min !== undefined && max !== undefined) return `${min}–${max}`;
+    if (min !== undefined) return `${min}+`;
+    return `up to ${max}`;
+}
+
 export function GamesPage() {
     const [results, setResults] = useState<SearchResultDTO[]>([]);
     const [loading, setLoading] = useState(true);
@@ -53,6 +60,7 @@ export function GamesPage() {
                         <tr>
                             <th>Type</th>
                             <th>Stakes</th>
+                            <th>Buy-in</th>
                             <th>Area</th>
                             <th>Day</th>
                             <th>Seats</th>
@@ -65,6 +73,7 @@ export function GamesPage() {
                             <tr key={listing.listingId} className="clickable" onClick={() => setShowDetail(listing.listingId)}>
                                 <td>{publicData.gameType}</td>
                                 <td>{publicData.stakesRange}</td>
+                                <td>{formatBuyIn(publicData.minBuyIn, publicData.maxBuyIn)}</td>
                                 <td>{publicData.generalArea}</td>
                                 <td>{publicData.dayOfWeek || "—"}</td>
                                 <td>{publicData.seatsAvailable ?? "—"}</td>
@@ -93,24 +102,43 @@ export function GamesPage() {
     );
 }
 
+function defaultStartLocal(): string {
+    // Default to next Friday 8pm in the user's local timezone, formatted for <input type="datetime-local">.
+    const d = new Date();
+    const daysUntilFriday = (5 - d.getDay() + 7) % 7 || 7;
+    d.setDate(d.getDate() + daysUntilFriday);
+    d.setHours(20, 0, 0, 0);
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
 function CreateGameModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
     const [needsUnlock, setNeedsUnlock] = useState(false);
     const [gameType, setGameType] = useState<GameType>("holdem");
     const [stakesRange, setStakesRange] = useState("");
     const [generalArea, setGeneralArea] = useState("");
-    const [dayOfWeek, setDayOfWeek] = useState("");
-    const [seats, setSeats] = useState("");
-    const [days, setDays] = useState("7");
+    const [startLocal, setStartLocal] = useState(defaultStartLocal());
+    const [seats, setSeats] = useState("9");
+    const [minBuyIn, setMinBuyIn] = useState("");
+    const [maxBuyIn, setMaxBuyIn] = useState("");
     const [location, setLocation] = useState("");
-    const [exactTime, setExactTime] = useState("");
     const [contact, setContact] = useState("");
     const [rules, setRules] = useState("");
     const [error, setError] = useState<string | null>(null);
     const [busy, setBusy] = useState(false);
 
+    const startDate = startLocal ? new Date(startLocal) : null;
+    const validStart = !!startDate && !Number.isNaN(startDate.getTime());
+    const dayOfWeek = validStart ? DAY_NAMES[startDate!.getDay()] : "";
+
     const submit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError(null);
+        if (!validStart) return setError("Pick a start date and time.");
+        if (startDate!.getTime() <= Date.now()) return setError("Start time must be in the future.");
+
         const status = await window.homegames.keyring.status();
         if (!status.unlocked) {
             setNeedsUnlock(true);
@@ -118,14 +146,19 @@ function CreateGameModal({ onClose, onCreated }: { onClose: () => void; onCreate
         }
         setBusy(true);
         try {
-            const hasPrivate = location || exactTime || contact || rules;
+            const startTs = Math.floor(startDate!.getTime() / 1000);
+            const expiresAt = startTs + 6 * 60 * 60; // listing drops 6h after start
+            const exactTime = startDate!.toLocaleString();
+            const hasPrivate = location || contact || rules;
             await window.homegames.games.create({
                 publicData: {
                     gameType,
                     stakesRange,
                     generalArea,
-                    dayOfWeek: dayOfWeek || undefined,
-                    seatsAvailable: seats ? parseInt(seats, 10) : undefined
+                    dayOfWeek,
+                    seatsAvailable: seats ? parseInt(seats, 10) : undefined,
+                    minBuyIn: minBuyIn ? parseInt(minBuyIn, 10) : undefined,
+                    maxBuyIn: maxBuyIn ? parseInt(maxBuyIn, 10) : undefined
                 },
                 privateData: hasPrivate ? {
                     location,
@@ -133,7 +166,7 @@ function CreateGameModal({ onClose, onCreated }: { onClose: () => void; onCreate
                     hostContact: contact,
                     houseRules: rules || undefined
                 } : undefined,
-                daysActive: parseInt(days, 10) || 7
+                expiresAt
             });
             onCreated();
         } catch (err) {
@@ -166,32 +199,39 @@ function CreateGameModal({ onClose, onCreated }: { onClose: () => void; onCreate
                         <label>General area</label>
                         <input value={generalArea} onChange={(e) => setGeneralArea(e.target.value)} placeholder="e.g. Downtown Melbourne" required />
                     </div>
-                    <div className="field" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+                    <div className="field" style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 8 }}>
                         <div>
-                            <label>Day</label>
-                            <input value={dayOfWeek} onChange={(e) => setDayOfWeek(e.target.value)} placeholder="Friday" />
+                            <label>Start{dayOfWeek && ` · ${dayOfWeek}`}</label>
+                            <input
+                                type="datetime-local"
+                                value={startLocal}
+                                onChange={(e) => setStartLocal(e.target.value)}
+                                required
+                            />
                         </div>
                         <div>
                             <label>Seats</label>
-                            <input value={seats} onChange={(e) => setSeats(e.target.value)} placeholder="8" />
+                            <input value={seats} onChange={(e) => setSeats(e.target.value)} placeholder="9" />
+                        </div>
+                    </div>
+                    <div className="field" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                        <div>
+                            <label>Min buy-in</label>
+                            <input value={minBuyIn} onChange={(e) => setMinBuyIn(e.target.value)} placeholder="100" />
                         </div>
                         <div>
-                            <label>Days active</label>
-                            <input value={days} onChange={(e) => setDays(e.target.value)} />
+                            <label>Max buy-in</label>
+                            <input value={maxBuyIn} onChange={(e) => setMaxBuyIn(e.target.value)} placeholder="500" />
                         </div>
                     </div>
 
                     <div className="divider" />
                     <div style={{ color: "var(--text-dim)", fontSize: 12, marginBottom: 8 }}>
-                        Private details (optional, encrypted to trusted players only)
+                        Private details (optional, encrypted to trusted players only). Exact start time is encrypted automatically.
                     </div>
                     <div className="field">
                         <label>Location</label>
                         <input value={location} onChange={(e) => setLocation(e.target.value)} />
-                    </div>
-                    <div className="field">
-                        <label>Exact time</label>
-                        <input value={exactTime} onChange={(e) => setExactTime(e.target.value)} placeholder="Friday 8pm" />
                     </div>
                     <div className="field">
                         <label>Host contact</label>
@@ -286,6 +326,9 @@ function GameDetailModal({
                         <div className="card">
                             <div className="row"><div className="label">Type</div><div>{detail.publicData.gameType}</div></div>
                             <div className="row"><div className="label">Stakes</div><div>{detail.publicData.stakesRange}</div></div>
+                            {(detail.publicData.minBuyIn !== undefined || detail.publicData.maxBuyIn !== undefined) && (
+                                <div className="row"><div className="label">Buy-in</div><div>{formatBuyIn(detail.publicData.minBuyIn, detail.publicData.maxBuyIn)}</div></div>
+                            )}
                             <div className="row"><div className="label">Area</div><div>{detail.publicData.generalArea}</div></div>
                             {detail.publicData.dayOfWeek && <div className="row"><div className="label">Day</div><div>{detail.publicData.dayOfWeek}</div></div>}
                             {detail.publicData.seatsAvailable !== undefined && <div className="row"><div className="label">Seats</div><div>{detail.publicData.seatsAvailable}</div></div>}
