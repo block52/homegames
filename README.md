@@ -4,6 +4,8 @@ P2P home poker game discovery platform with Web of Trust.
 
 A decentralized platform for finding and advertising home poker games with privacy and trust at its core.
 
+<img width="1212" height="852" alt="image" src="https://github.com/user-attachments/assets/ebf5e0fc-c756-4b21-8d59-0a0572c322e3" />
+
 ## Features
 
 - **GPG-based cryptographic identity** - Your identity is a GPG keypair
