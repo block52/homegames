@@ -10,6 +10,7 @@ interface RSVPRow {
     player_fingerprint: string;
     status: RSVPStatus;
     timestamp: number;
+    note: string | null;
 }
 
 function rowToRSVP(row: RSVPRow): RSVPRequest {
@@ -18,7 +19,8 @@ function rowToRSVP(row: RSVPRow): RSVPRequest {
         gameListingId: row.game_listing_id,
         playerFingerprint: row.player_fingerprint,
         status: row.status,
-        timestamp: row.timestamp
+        timestamp: row.timestamp,
+        note: row.note || undefined
     };
 }
 
@@ -28,11 +30,18 @@ export class RSVPRepository {
     create(rsvp: Omit<RSVPRequest, "id"> & { id?: string }): RSVPRequest {
         const id = rsvp.id || generateId();
         const stmt = this.db.prepare(`
-            INSERT INTO rsvps (id, game_listing_id, player_fingerprint, status, timestamp)
-            VALUES (?, ?, ?, ?, ?)
+            INSERT INTO rsvps (id, game_listing_id, player_fingerprint, status, timestamp, note)
+            VALUES (?, ?, ?, ?, ?, ?)
         `);
 
-        stmt.run(id, rsvp.gameListingId, rsvp.playerFingerprint, rsvp.status, rsvp.timestamp);
+        stmt.run(
+            id,
+            rsvp.gameListingId,
+            rsvp.playerFingerprint,
+            rsvp.status,
+            rsvp.timestamp,
+            rsvp.note || null
+        );
 
         return { ...rsvp, id };
     }

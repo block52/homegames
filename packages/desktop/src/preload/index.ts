@@ -22,7 +22,7 @@ const api: HomeGamesAPI = {
         list: (filters) => ipcRenderer.invoke("games:list", filters),
         create: (params) => ipcRenderer.invoke("games:create", params),
         show: (listingId) => ipcRenderer.invoke("games:show", listingId),
-        rsvp: (listingId) => ipcRenderer.invoke("games:rsvp", listingId),
+        rsvp: (listingId, note) => ipcRenderer.invoke("games:rsvp", listingId, note),
         cancel: (listingId) => ipcRenderer.invoke("games:cancel", listingId)
     }
 };

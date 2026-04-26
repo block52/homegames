@@ -35,6 +35,7 @@ export interface RSVPRequest {
     playerFingerprint: string;
     status: "pending" | "accepted" | "declined";
     timestamp: number;
+    note?: string;
 }
 
 export interface GameFilters {

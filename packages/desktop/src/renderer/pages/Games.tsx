@@ -265,6 +265,7 @@ function GameDetailModal({
     const [needsUnlock, setNeedsUnlock] = useState(false);
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [note, setNote] = useState("");
 
     const load = async () => {
         const d = await window.homegames.games.show(listingId);
@@ -288,12 +289,17 @@ function GameDetailModal({
         setBusy(true);
         setError(null);
         try {
-            await window.homegames.games.rsvp(listingId);
+            await window.homegames.games.rsvp(listingId, note.trim() || undefined);
+            setNote("");
             await load();
         } catch (err) {
             setError((err as Error).message);
         } finally { setBusy(false); }
     };
+
+    // For non-hosts, the IPC layer already filters rsvps to just the
+    // viewer's own row, so its presence == "I have RSVPed".
+    const myRsvp = !detail?.isHost ? detail?.rsvps[0] : undefined;
 
     const cancel = async () => {
         if (!confirm("Cancel this listing?")) return;
@@ -355,11 +361,41 @@ function GameDetailModal({
                             <div className="card">
                                 <div className="label" style={{ marginBottom: 8 }}>RSVPs ({detail.rsvps.length})</div>
                                 {detail.rsvps.map((r) => (
-                                    <div key={r.id} className="row" style={{ marginTop: 4 }}>
-                                        <div className="mono">{shortFp(r.playerFingerprint)}</div>
-                                        <div><span className={`badge ${r.status === "accepted" ? "trusted" : r.status === "declined" ? "blocked" : "pending"}`}>{r.status}</span></div>
+                                    <div key={r.id} style={{ marginTop: 8 }}>
+                                        <div className="row">
+                                            <div className="mono">{shortFp(r.playerFingerprint)}</div>
+                                            <div><span className={`badge ${r.status === "accepted" ? "trusted" : r.status === "declined" ? "blocked" : "pending"}`}>{r.status}</span></div>
+                                        </div>
+                                        {r.note && (
+                                            <div style={{ marginTop: 4, color: "var(--text-dim)", fontSize: 12, fontStyle: "italic" }}>
+                                                "{r.note}"
+                                            </div>
+                                        )}
                                     </div>
                                 ))}
+                            </div>
+                        )}
+
+                        {!detail.isHost && myRsvp && (
+                            <div className="alert info">
+                                ✓ You've RSVPed (status: {myRsvp.status})
+                                {myRsvp.note && (
+                                    <div style={{ marginTop: 4, fontStyle: "italic", color: "var(--text-dim)" }}>
+                                        Your note: "{myRsvp.note}"
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {!detail.isHost && !myRsvp && (
+                            <div className="card">
+                                <label>Note for host (optional)</label>
+                                <textarea
+                                    value={note}
+                                    onChange={(e) => setNote(e.target.value)}
+                                    rows={2}
+                                    placeholder="e.g. can only stay till 11"
+                                />
                             </div>
                         )}
 
@@ -369,9 +405,11 @@ function GameDetailModal({
                             <button type="button" onClick={onClose}>Close</button>
                             {detail.isHost ? (
                                 <button className="danger" onClick={cancel} disabled={busy}>Cancel listing</button>
-                            ) : (
-                                <button className="primary" onClick={rsvp} disabled={busy}>RSVP</button>
-                            )}
+                            ) : !myRsvp ? (
+                                <button className="primary" onClick={rsvp} disabled={busy}>
+                                    {busy ? "RSVPing…" : "RSVP Yes"}
+                                </button>
+                            ) : null}
                         </div>
                     </>
                 )}

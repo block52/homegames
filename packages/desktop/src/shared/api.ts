@@ -76,7 +76,7 @@ export interface HomeGamesAPI {
         }) => Promise<SearchResultDTO[]>;
         create: (params: CreateGameParams) => Promise<GameListing>;
         show: (listingId: string) => Promise<GameDetailDTO | null>;
-        rsvp: (listingId: string) => Promise<RSVPRequest>;
+        rsvp: (listingId: string, note?: string) => Promise<RSVPRequest>;
         cancel: (listingId: string) => Promise<void>;
     };
 }

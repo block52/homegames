@@ -169,9 +169,14 @@ export function registerIpcHandlers(): void {
         if (!listing) return null;
 
         const publicData = JSON.parse(listing.publicDataJson) as GamePublicData;
-        const rsvps = rsvpRepo.getByGame(listing.listingId);
         const me = identityRepo.get();
         const isHost = me?.fingerprint === listing.hostFingerprint;
+        // Hosts see every RSVP; non-hosts only see their own row so they
+        // know whether they've already RSVPed without leaking other guests.
+        const allRsvps = rsvpRepo.getByGame(listing.listingId);
+        const rsvps = isHost
+            ? allRsvps
+            : allRsvps.filter((r) => r.playerFingerprint === me?.fingerprint);
 
         const detail: GameDetailDTO = { listing, publicData, rsvps, isHost };
 
@@ -192,7 +197,7 @@ export function registerIpcHandlers(): void {
         return detail;
     });
 
-    handle<HomeGamesAPI["games"]["rsvp"]>("games:rsvp", async (_e, listingId) => {
+    handle<HomeGamesAPI["games"]["rsvp"]>("games:rsvp", async (_e, listingId, note) => {
         const { rsvpService, gameRepo } = getServices();
         let listing = gameRepo.getById(listingId);
         if (!listing) {
@@ -200,7 +205,7 @@ export function registerIpcHandlers(): void {
             listing = all.find((g) => g.listingId.startsWith(listingId)) || null;
         }
         if (!listing) throw new Error("Listing not found");
-        const signed = await rsvpService.requestRSVP(listing.listingId);
+        const signed = await rsvpService.requestRSVP(listing.listingId, note);
         return signed.rsvp;
     });
 

@@ -377,7 +377,8 @@ export function registerGameCommands(program: Command): void {
         .command("rsvp")
         .description("RSVP to a game")
         .argument("<listing-id>", "The game listing ID (or 12-char prefix)")
-        .action(async (listingId) => {
+        .option("-n, --note <note>", "Optional note for the host")
+        .action(async (listingId, options) => {
             const deps = await withUnlockedKeyring();
             if (!deps) return;
 
@@ -393,7 +394,7 @@ export function registerGameCommands(program: Command): void {
             }
 
             try {
-                const signed = await deps.rsvpService.requestRSVP(listing.listingId);
+                const signed = await deps.rsvpService.requestRSVP(listing.listingId, options.note);
                 output.success("RSVP recorded.");
                 console.log();
                 console.log(`RSVP ID:    ${signed.rsvp.id}`);

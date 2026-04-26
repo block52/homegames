@@ -33,7 +33,7 @@ export class RSVPService {
         private keyring: Keyring
     ) {}
 
-    async requestRSVP(gameListingId: string): Promise<SignedRSVP> {
+    async requestRSVP(gameListingId: string, note?: string): Promise<SignedRSVP> {
         const privateKey = this.keyring.getPrivateKey();
         if (!privateKey) {
             throw new Error("Keyring is not unlocked.");
@@ -65,7 +65,8 @@ export class RSVPService {
             gameListingId,
             playerFingerprint,
             status: "pending",
-            timestamp: timestampNow()
+            timestamp: timestampNow(),
+            note: note || undefined
         };
 
         const payload: RSVPSignedPayload = { ...rsvp };
