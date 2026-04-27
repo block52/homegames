@@ -178,21 +178,23 @@ export class GameService {
     }
 
     private async collectTrustedRecipients(hostFingerprint: string): Promise<EncryptedRecipient[]> {
-        const trusted: Player[] = this.playerRepo.getByTrustStatus("trusted");
         const recipients: EncryptedRecipient[] = [];
 
-        const includeHost = !trusted.some((p) => p.gpgFingerprint === hostFingerprint);
-        if (includeHost) {
-            const host = this.playerRepo.getByFingerprint(hostFingerprint);
-            if (host) {
-                recipients.push({
-                    fingerprint: host.gpgFingerprint,
-                    publicKeyArmored: host.publicKeyArmored
-                });
-            }
+        // The host is always a recipient — you can read your own listings
+        // regardless of how many vouches you have. Trust calculation would
+        // mark you as untrusted (no self-vouching), which would downgrade
+        // your DB row and leave the recipient list empty.
+        const host = this.playerRepo.getByFingerprint(hostFingerprint);
+        if (host) {
+            recipients.push({
+                fingerprint: host.gpgFingerprint,
+                publicKeyArmored: host.publicKeyArmored
+            });
         }
 
+        const trusted: Player[] = this.playerRepo.getByTrustStatus("trusted");
         for (const player of trusted) {
+            if (player.gpgFingerprint === hostFingerprint) continue;
             const result = await this.trustEngine.calculateTrust(player.gpgFingerprint);
             if (result.status === "trusted") {
                 recipients.push({

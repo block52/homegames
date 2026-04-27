@@ -32,9 +32,9 @@ export function Sidebar({ page, onNavigate }: Props) {
         <aside className="sidebar">
             <h1>HomeGames</h1>
             <nav>
-                <button className={`nav-item ${page === "identity" ? "active" : ""}`} onClick={() => onNavigate("identity")}>Identity</button>
-                <button className={`nav-item ${page === "peers" ? "active" : ""}`} onClick={() => onNavigate("peers")}>Peers</button>
                 <button className={`nav-item ${page === "games" ? "active" : ""}`} onClick={() => onNavigate("games")}>Games</button>
+                <button className={`nav-item ${page === "peers" ? "active" : ""}`} onClick={() => onNavigate("peers")}>Peers</button>
+                <button className={`nav-item ${page === "identity" ? "active" : ""}`} onClick={() => onNavigate("identity")}>Identity</button>
             </nav>
             <div className="footer">
                 {status.fingerprint ? (

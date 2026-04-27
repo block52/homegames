@@ -1,11 +1,21 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Sidebar, type Page } from "./components/Sidebar";
 import { IdentityPage } from "./pages/Identity";
 import { PeersPage } from "./pages/Peers";
 import { GamesPage } from "./pages/Games";
 
 export function App() {
-    const [page, setPage] = useState<Page>("identity");
+    const [page, setPage] = useState<Page | null>(null);
+
+    useEffect(() => {
+        // Land on Games when an identity already exists; otherwise drop
+        // the user on Identity so they see the create-identity form.
+        window.homegames.identity.get().then((id) => {
+            setPage(id ? "games" : "identity");
+        });
+    }, []);
+
+    if (page === null) return null;
 
     return (
         <div className="app">
