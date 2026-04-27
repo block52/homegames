@@ -14,7 +14,10 @@ const api: HomeGamesAPI = {
     },
     peers: {
         list: () => ipcRenderer.invoke("peers:list"),
-        detail: (fingerprint) => ipcRenderer.invoke("peers:detail", fingerprint)
+        detail: (fingerprint) => ipcRenderer.invoke("peers:detail", fingerprint),
+        previewArmored: (armored) => ipcRenderer.invoke("peers:previewArmored", armored),
+        import: (armored) => ipcRenderer.invoke("peers:import", armored),
+        fetchByFingerprint: (fp) => ipcRenderer.invoke("peers:fetchByFingerprint", fp)
     },
     vouches: {
         listMine: () => ipcRenderer.invoke("vouches:listMine"),

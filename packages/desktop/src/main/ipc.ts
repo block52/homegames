@@ -16,8 +16,12 @@ import type {
     GameDetailDTO,
     SearchResultDTO,
     KeyringStatus,
-    CheckInRecordedDTO
+    CheckInRecordedDTO,
+    PeerImportPreview,
+    PeerImportResult
 } from "../shared/api.js";
+
+const KEYS_OPENPGP_BASE = "https://keys.openpgp.org/vks/v1/by-fingerprint/";
 
 type Handler<T extends (...args: never[]) => unknown> = (
     _event: Electron.IpcMainInvokeEvent,
@@ -144,6 +148,52 @@ export function registerIpcHandlers(): void {
             myVouch: myVouch && !myVouch.revokedAt ? myVouch : null,
             isSelf
         };
+    });
+
+    handle<HomeGamesAPI["peers"]["previewArmored"]>("peers:previewArmored", async (_e, armored) => {
+        const key = await openpgp.readKey({ armoredKey: armored });
+        const fingerprint = key.getFingerprint().toUpperCase();
+        const userIds = key.getUserIDs();
+        return { fingerprint, publicKeyArmored: armored, userIds } satisfies PeerImportPreview;
+    });
+
+    handle<HomeGamesAPI["peers"]["import"]>("peers:import", async (_e, armored) => {
+        const { playerRepo, identityRepo } = getServices();
+        const key = await openpgp.readKey({ armoredKey: armored });
+        const fingerprint = key.getFingerprint().toUpperCase();
+
+        const me = identityRepo.get();
+        if (me?.fingerprint === fingerprint) {
+            throw new Error("That's your own key.");
+        }
+
+        const existing = playerRepo.getByFingerprint(fingerprint);
+        if (existing) {
+            playerRepo.updateLastSeen(fingerprint);
+            return { player: { ...existing, lastSeen: Math.floor(Date.now() / 1000) }, wasNew: false } satisfies PeerImportResult;
+        }
+        const player = playerRepo.create({
+            gpgFingerprint: fingerprint,
+            publicKeyArmored: armored,
+            trustStatus: "untrusted"
+        });
+        return { player, wasNew: true } satisfies PeerImportResult;
+    });
+
+    handle<HomeGamesAPI["peers"]["fetchByFingerprint"]>("peers:fetchByFingerprint", async (_e, fingerprint) => {
+        const normalised = fingerprint.replace(/\s+/g, "").toUpperCase();
+        if (!/^[A-F0-9]{40}$/.test(normalised)) {
+            throw new Error("Invalid fingerprint. Expected 40 hex characters.");
+        }
+        const url = `${KEYS_OPENPGP_BASE}${normalised}`;
+        const res = await fetch(url, { headers: { Accept: "application/pgp-keys" } });
+        if (res.status === 404) {
+            throw new Error("Key not found on keys.openpgp.org. Try paste or QR instead.");
+        }
+        if (!res.ok) {
+            throw new Error(`Keyserver returned ${res.status}.`);
+        }
+        return res.text();
     });
 
     // ─── Vouches ────────────────────────────────────────────────────────
