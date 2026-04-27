@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { IdentitySummary } from "../../shared/api";
 import { formatFp, formatTime } from "../utils";
+import { QRCanvas } from "../components/QRCanvas";
 
 export function IdentityPage() {
     const [identity, setIdentity] = useState<IdentitySummary | null | undefined>(undefined);
@@ -34,16 +35,54 @@ export function IdentityPage() {
             <div className="card">
                 <div className="label">Public key</div>
                 <pre style={{ marginTop: 8 }}>{identity.publicKeyArmored}</pre>
-                <button
-                    style={{ marginTop: 8 }}
-                    onClick={() => navigator.clipboard.writeText(identity.publicKeyArmored)}
-                >
-                    Copy public key
-                </button>
+                <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                    <button onClick={() => navigator.clipboard.writeText(identity.publicKeyArmored)}>
+                        Copy public key
+                    </button>
+                    <ShowAsQRButton armored={identity.publicKeyArmored} />
+                </div>
             </div>
 
             <DangerZone onDeleted={refresh} />
         </div>
+    );
+}
+
+function ShowAsQRButton({ armored }: { armored: string }) {
+    const [open, setOpen] = useState(false);
+    // Ed25519 public keys armored fit comfortably in a single QR (~700 chars).
+    // RSA 4096 keys are ~3000 chars and overflow QR capacity — surface that
+    // explicitly so the user knows to fall back to copy-paste.
+    const tooBig = armored.length > 1800;
+
+    return (
+        <>
+            <button onClick={() => setOpen(true)}>Show as QR</button>
+            {open && (
+                <div className="modal-backdrop" onClick={() => setOpen(false)}>
+                    <div className="modal" onClick={(e) => e.stopPropagation()}>
+                        <h3>Your public key as QR</h3>
+                        {tooBig ? (
+                            <div className="alert warn">
+                                This key is too large to fit in a single QR. Use 'Copy public key' and paste it instead.
+                            </div>
+                        ) : (
+                            <>
+                                <p style={{ color: "var(--text-dim)", fontSize: 13, marginTop: -8 }}>
+                                    Have your peer scan this from their HomeGames → Peers → Add peer → QR.
+                                </p>
+                                <div style={{ display: "flex", justifyContent: "center", padding: "8px 0 16px" }}>
+                                    <QRCanvas payload={armored} size={300} />
+                                </div>
+                            </>
+                        )}
+                        <div className="actions">
+                            <button onClick={() => setOpen(false)}>Close</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </>
     );
 }
 

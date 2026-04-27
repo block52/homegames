@@ -61,6 +61,17 @@ export interface PeerDetailDTO {
     isSelf: boolean;
 }
 
+export interface PeerImportPreview {
+    fingerprint: string;
+    publicKeyArmored: string;
+    userIds: string[];
+}
+
+export interface PeerImportResult {
+    player: Player;
+    wasNew: boolean;
+}
+
 export interface KeyringStatus {
     unlocked: boolean;
     fingerprint: string | null;
@@ -80,6 +91,9 @@ export interface HomeGamesAPI {
     peers: {
         list: () => Promise<Player[]>;
         detail: (fingerprint: string) => Promise<PeerDetailDTO | null>;
+        previewArmored: (armored: string) => Promise<PeerImportPreview>;
+        import: (armored: string) => Promise<PeerImportResult>;
+        fetchByFingerprint: (fingerprint: string) => Promise<string>;
     };
     vouches: {
         listMine: () => Promise<Vouch[]>;
