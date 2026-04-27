@@ -43,9 +43,9 @@ export function registerIpcHandlers(): void {
 
     handle<HomeGamesAPI["identity"]["delete"]>("identity:delete", async () => {
         const { identityRepo, keyring } = getServices();
-        // Wipe the in-memory private key first so a delete never leaves
-        // a stale unlocked keyring pointing at a non-existent identity.
-        keyring.lock();
+        // Wipe both keys so a delete never leaves a stale fingerprint
+        // hanging in the sidebar UI pointing at a non-existent identity.
+        keyring.forget();
         identityRepo.delete();
     });
 
