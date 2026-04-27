@@ -107,6 +107,17 @@ export class Keyring {
         }
     }
 
+    /**
+     * Forget both keys. Use when the underlying identity is gone
+     * (e.g. user deleted it); for normal session locking, use lock()
+     * which preserves the public key so the UI can still show the
+     * fingerprint while the private key is wiped.
+     */
+    forget(): void {
+        this.lock();
+        this.publicKey = null;
+    }
+
     private resetPassphraseTimeout(): void {
         if (this.passphraseTimeout) {
             clearTimeout(this.passphraseTimeout);

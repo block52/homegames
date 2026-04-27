@@ -43,9 +43,9 @@ export function registerIpcHandlers(): void {
 
     handle<HomeGamesAPI["identity"]["delete"]>("identity:delete", async () => {
         const { identityRepo, keyring } = getServices();
-        // Wipe the in-memory private key first so a delete never leaves
-        // a stale unlocked keyring pointing at a non-existent identity.
-        keyring.lock();
+        // Wipe both keys so a delete never leaves a stale fingerprint
+        // hanging in the sidebar UI pointing at a non-existent identity.
+        keyring.forget();
         identityRepo.delete();
     });
 
@@ -114,6 +114,38 @@ export function registerIpcHandlers(): void {
         return playerRepo.getAll();
     });
 
+    handle<HomeGamesAPI["peers"]["detail"]>("peers:detail", async (_e, fingerprint) => {
+        const { playerRepo, vouchRepo, trustEngine, identityRepo } = getServices();
+        const player = playerRepo.getByFingerprint(fingerprint);
+        if (!player) return null;
+
+        const me = identityRepo.get();
+        const isSelf = me?.fingerprint === fingerprint;
+
+        const trust = await trustEngine.calculateTrust(fingerprint);
+        const vouchesFor = vouchRepo.getVouchesFor(fingerprint);
+        const myVouch = me
+            ? vouchRepo.getVouchBetween(me.fingerprint, fingerprint)
+            : null;
+
+        // calculateTrust normalises 'blocked' to 'untrusted' in its
+        // result object, so we look at the raw player row to surface
+        // the actual block state to the UI.
+        const trustStatus = player.trustStatus === "blocked"
+            ? "blocked"
+            : trust.status;
+
+        return {
+            player,
+            trustStatus,
+            validVouchCount: trust.validVouchCount,
+            requiredVouches: trust.requiredVouches,
+            vouchesFor,
+            myVouch: myVouch && !myVouch.revokedAt ? myVouch : null,
+            isSelf
+        };
+    });
+
     // ─── Vouches ────────────────────────────────────────────────────────
     handle<HomeGamesAPI["vouches"]["listMine"]>("vouches:listMine", async () => {
         const { vouchService } = getServices();
@@ -127,6 +159,11 @@ export function registerIpcHandlers(): void {
             return vouchService.createVouch({ voucheeFingerprint, trustLevel, note });
         }
     );
+
+    handle<HomeGamesAPI["vouches"]["revoke"]>("vouches:revoke", async (_e, voucheeFingerprint) => {
+        const { vouchService } = getServices();
+        vouchService.revokeVouch(voucheeFingerprint);
+    });
 
     // ─── Games ──────────────────────────────────────────────────────────
     handle<HomeGamesAPI["games"]["list"]>("games:list", async (_e, filters) => {

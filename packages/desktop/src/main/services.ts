@@ -70,6 +70,15 @@ export function getServices(): AppServices {
         rsvpService,
         checkinService
     };
+
+    // Eagerly load the public key so the sidebar can show your
+    // fingerprint without forcing an unlock first. The private key
+    // stays on disk (encrypted) until the user enters their passphrase.
+    const local = identityRepo.get();
+    if (local) {
+        keyring.loadPublicKey(local.publicKey).catch(() => { /* ignore */ });
+    }
+
     return cached;
 }
 
