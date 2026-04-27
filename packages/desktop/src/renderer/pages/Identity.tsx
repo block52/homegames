@@ -41,7 +41,54 @@ export function IdentityPage() {
                     Copy public key
                 </button>
             </div>
+
+            <DangerZone onDeleted={refresh} />
         </div>
+    );
+}
+
+function DangerZone({ onDeleted }: { onDeleted: () => void }) {
+    const [confirming, setConfirming] = useState(false);
+    const [busy, setBusy] = useState(false);
+
+    const remove = async () => {
+        setBusy(true);
+        try {
+            await window.homegames.identity.delete();
+            setConfirming(false);
+            onDeleted();
+        } finally {
+            setBusy(false);
+        }
+    };
+
+    return (
+        <>
+            <div className="card" style={{ borderColor: "var(--danger)" }}>
+                <div className="label" style={{ color: "var(--danger)" }}>Danger zone</div>
+                <p style={{ color: "var(--text-dim)", fontSize: 13, margin: "8px 0 12px" }}>
+                    Deleting your identity removes the local private key. Vouches you've made and games you've hosted stay in the database but become unsigned-by-anyone-here. There is no recovery.
+                </p>
+                <button className="danger" onClick={() => setConfirming(true)}>Delete identity</button>
+            </div>
+
+            {confirming && (
+                <div className="modal-backdrop" onClick={() => !busy && setConfirming(false)}>
+                    <div className="modal" onClick={(e) => e.stopPropagation()}>
+                        <h3>Delete identity?</h3>
+                        <p style={{ color: "var(--text-dim)", fontSize: 13 }}>
+                            Your encrypted private key will be removed from <span className="kbd">~/.homegames/homegames.db</span>. If you don't have the passphrase + an exported backup elsewhere, this is permanent.
+                        </p>
+                        <div className="actions">
+                            <button onClick={() => setConfirming(false)} disabled={busy}>Cancel</button>
+                            <button className="danger" onClick={remove} disabled={busy}>
+                                {busy ? "Deleting…" : "Yes, delete"}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </>
     );
 }
 

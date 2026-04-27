@@ -4,7 +4,8 @@ import type { HomeGamesAPI } from "../shared/api.js";
 const api: HomeGamesAPI = {
     identity: {
         get: () => ipcRenderer.invoke("identity:get"),
-        create: (params) => ipcRenderer.invoke("identity:create", params)
+        create: (params) => ipcRenderer.invoke("identity:create", params),
+        delete: () => ipcRenderer.invoke("identity:delete")
     },
     keyring: {
         unlock: (passphrase) => ipcRenderer.invoke("keyring:unlock", passphrase),

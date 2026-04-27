@@ -60,6 +60,7 @@ export interface HomeGamesAPI {
     identity: {
         get: () => Promise<IdentitySummary | null>;
         create: (params: CreateIdentityParams) => Promise<IdentitySummary>;
+        delete: () => Promise<void>;
     };
     keyring: {
         unlock: (passphrase: string) => Promise<boolean>;
