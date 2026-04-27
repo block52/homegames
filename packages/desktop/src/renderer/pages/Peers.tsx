@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
 import type { Player } from "@homegames/core";
 import { shortFp, formatTime } from "../utils";
+import { PeerDetailModal } from "../components/PeerDetailModal";
 
 export function PeersPage() {
     const [peers, setPeers] = useState<Player[]>([]);
     const [loading, setLoading] = useState(true);
+    const [selected, setSelected] = useState<string | null>(null);
 
     const refresh = async () => {
         setLoading(true);
@@ -45,7 +47,9 @@ export function PeersPage() {
                     </thead>
                     <tbody>
                         {peers.map((p) => (
-                            <tr key={p.gpgFingerprint}>
+                            <tr key={p.gpgFingerprint}
+                                className="clickable"
+                                onClick={() => setSelected(p.gpgFingerprint)}>
                                 <td className="mono">{shortFp(p.gpgFingerprint)}</td>
                                 <td>{nickname(p) || <span style={{ color: "var(--text-dim)" }}>—</span>}</td>
                                 <td><span className={`badge ${p.trustStatus}`}>{p.trustStatus}</span></td>
@@ -57,6 +61,14 @@ export function PeersPage() {
                         ))}
                     </tbody>
                 </table>
+            )}
+
+            {selected && (
+                <PeerDetailModal
+                    fingerprint={selected}
+                    onClose={() => setSelected(null)}
+                    onChanged={refresh}
+                />
             )}
         </div>
     );

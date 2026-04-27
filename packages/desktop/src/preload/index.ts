@@ -13,11 +13,13 @@ const api: HomeGamesAPI = {
         status: () => ipcRenderer.invoke("keyring:status")
     },
     peers: {
-        list: () => ipcRenderer.invoke("peers:list")
+        list: () => ipcRenderer.invoke("peers:list"),
+        detail: (fingerprint) => ipcRenderer.invoke("peers:detail", fingerprint)
     },
     vouches: {
         listMine: () => ipcRenderer.invoke("vouches:listMine"),
-        create: (fp, level, note) => ipcRenderer.invoke("vouches:create", fp, level, note)
+        create: (fp, level, note) => ipcRenderer.invoke("vouches:create", fp, level, note),
+        revoke: (fingerprint) => ipcRenderer.invoke("vouches:revoke", fingerprint)
     },
     games: {
         list: (filters) => ipcRenderer.invoke("games:list", filters),

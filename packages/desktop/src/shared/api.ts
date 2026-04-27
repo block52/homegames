@@ -51,6 +51,16 @@ export interface CheckInRecordedDTO {
     playerNickname?: string;
 }
 
+export interface PeerDetailDTO {
+    player: Player;
+    trustStatus: "trusted" | "pending" | "untrusted" | "blocked";
+    validVouchCount: number;
+    requiredVouches: number;
+    vouchesFor: Vouch[];
+    myVouch: Vouch | null;
+    isSelf: boolean;
+}
+
 export interface KeyringStatus {
     unlocked: boolean;
     fingerprint: string | null;
@@ -69,6 +79,7 @@ export interface HomeGamesAPI {
     };
     peers: {
         list: () => Promise<Player[]>;
+        detail: (fingerprint: string) => Promise<PeerDetailDTO | null>;
     };
     vouches: {
         listMine: () => Promise<Vouch[]>;
@@ -77,6 +88,7 @@ export interface HomeGamesAPI {
             trustLevel: TrustLevel,
             note?: string
         ) => Promise<Vouch>;
+        revoke: (voucheeFingerprint: string) => Promise<void>;
     };
     games: {
         list: (filters?: {
