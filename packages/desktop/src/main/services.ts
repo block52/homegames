@@ -12,7 +12,8 @@ import {
     VouchService,
     GameService,
     RSVPService,
-    CheckInService
+    CheckInService,
+    NetworkService
 } from "@homegames/core";
 
 export interface AppServices {
@@ -30,6 +31,10 @@ export interface AppServices {
     gameService: GameService;
     rsvpService: RSVPService;
     checkinService: CheckInService;
+    networkService: NetworkService | null;
+    networkLastError: string | null;
+    setNetworkService: (svc: NetworkService | null) => void;
+    setNetworkLastError: (err: string | null) => void;
 }
 
 let cached: AppServices | null = null;
@@ -54,7 +59,7 @@ export function getServices(): AppServices {
     const rsvpService = new RSVPService(rsvpRepo, gameRepo, playerRepo, keyring);
     const checkinService = new CheckInService(checkinRepo, gameRepo, playerRepo, keyring);
 
-    cached = {
+    const services: AppServices = {
         db,
         keyring,
         playerRepo,
@@ -68,8 +73,17 @@ export function getServices(): AppServices {
         vouchService,
         gameService,
         rsvpService,
-        checkinService
+        checkinService,
+        networkService: null,
+        networkLastError: null,
+        setNetworkService: (svc) => {
+            services.networkService = svc;
+        },
+        setNetworkLastError: (err) => {
+            services.networkLastError = err;
+        }
     };
+    cached = services;
 
     // Eagerly load the public key so the sidebar can show your
     // fingerprint without forcing an unlock first. The private key
@@ -82,8 +96,12 @@ export function getServices(): AppServices {
     return cached;
 }
 
-export function shutdownServices(): void {
+export async function shutdownServices(): Promise<void> {
     if (cached) {
+        if (cached.networkService) {
+            await cached.networkService.stop().catch(() => { /* ignore */ });
+            cached.networkService = null;
+        }
         cached.keyring.lock();
         cached.db.close();
         cached = null;

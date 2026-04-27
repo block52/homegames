@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { shortFp } from "../utils";
+import { NetworkPanel } from "./NetworkPanel";
 import type { KeyringStatus } from "../../shared/api";
 
 export type Page = "identity" | "peers" | "games";
@@ -36,6 +37,7 @@ export function Sidebar({ page, onNavigate }: Props) {
                 <button className={`nav-item ${page === "peers" ? "active" : ""}`} onClick={() => onNavigate("peers")}>Peers</button>
                 <button className={`nav-item ${page === "identity" ? "active" : ""}`} onClick={() => onNavigate("identity")}>Identity</button>
             </nav>
+            <NetworkPanel />
             <div className="footer">
                 {status.fingerprint ? (
                     <>

@@ -85,6 +85,21 @@ export class NetworkService extends EventEmitter {
     }
 
     /**
+     * Initialize from an already-decrypted private key. Use this when
+     * the caller (e.g. desktop UI) has an unlocked Keyring and doesn't
+     * want to re-prompt for a passphrase to start the network.
+     */
+    setKeys(
+        fingerprint: string,
+        privateKey: openpgp.PrivateKey,
+        publicKeyArmored: string
+    ): void {
+        this.localFingerprint = fingerprint;
+        this.privateKey = privateKey;
+        this.publicKeyArmored = publicKeyArmored;
+    }
+
+    /**
      * Start the network service
      */
     async start(): Promise<void> {

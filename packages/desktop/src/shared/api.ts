@@ -77,6 +77,16 @@ export interface KeyringStatus {
     fingerprint: string | null;
 }
 
+export type NetworkStateLabel = "disconnected" | "connecting" | "connected" | "error";
+
+export interface NetworkStatusDTO {
+    state: NetworkStateLabel;
+    destinationBase32: string | null;
+    destinationBase64: string | null;
+    peerCount: number;
+    lastError: string | null;
+}
+
 export interface HomeGamesAPI {
     identity: {
         get: () => Promise<IdentitySummary | null>;
@@ -124,6 +134,11 @@ export interface HomeGamesAPI {
             response: CheckInResponse
         ) => Promise<CheckInRecordedDTO>;
         listForGame: (gameListingId: string) => Promise<CheckIn[]>;
+    };
+    network: {
+        status: () => Promise<NetworkStatusDTO>;
+        start: () => Promise<NetworkStatusDTO>;
+        stop: () => Promise<NetworkStatusDTO>;
     };
 }
 

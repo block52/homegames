@@ -36,6 +36,11 @@ const api: HomeGamesAPI = {
         signChallenge: (challenge) => ipcRenderer.invoke("checkins:signChallenge", challenge),
         verifyAndRecord: (challenge, response) => ipcRenderer.invoke("checkins:verifyAndRecord", challenge, response),
         listForGame: (gameListingId) => ipcRenderer.invoke("checkins:listForGame", gameListingId)
+    },
+    network: {
+        status: () => ipcRenderer.invoke("network:status"),
+        start: () => ipcRenderer.invoke("network:start"),
+        stop: () => ipcRenderer.invoke("network:stop")
     }
 };
 
