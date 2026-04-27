@@ -24,6 +24,12 @@ const api: HomeGamesAPI = {
         show: (listingId) => ipcRenderer.invoke("games:show", listingId),
         rsvp: (listingId, note) => ipcRenderer.invoke("games:rsvp", listingId, note),
         cancel: (listingId) => ipcRenderer.invoke("games:cancel", listingId)
+    },
+    checkins: {
+        createChallenge: (gameListingId) => ipcRenderer.invoke("checkins:createChallenge", gameListingId),
+        signChallenge: (challenge) => ipcRenderer.invoke("checkins:signChallenge", challenge),
+        verifyAndRecord: (challenge, response) => ipcRenderer.invoke("checkins:verifyAndRecord", challenge, response),
+        listForGame: (gameListingId) => ipcRenderer.invoke("checkins:listForGame", gameListingId)
     }
 };
 

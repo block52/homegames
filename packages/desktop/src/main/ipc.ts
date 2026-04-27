@@ -15,7 +15,8 @@ import type {
     IdentitySummary,
     GameDetailDTO,
     SearchResultDTO,
-    KeyringStatus
+    KeyringStatus,
+    CheckInRecordedDTO
 } from "../shared/api.js";
 
 type Handler<T extends (...args: never[]) => unknown> = (
@@ -159,7 +160,7 @@ export function registerIpcHandlers(): void {
     });
 
     handle<HomeGamesAPI["games"]["show"]>("games:show", async (_e, listingId) => {
-        const { gameRepo, rsvpRepo, identityRepo, playerRepo, keyring } = getServices();
+        const { gameRepo, rsvpRepo, checkinRepo, identityRepo, playerRepo, keyring } = getServices();
 
         let listing = gameRepo.getById(listingId);
         if (!listing) {
@@ -178,7 +179,13 @@ export function registerIpcHandlers(): void {
             ? allRsvps
             : allRsvps.filter((r) => r.playerFingerprint === me?.fingerprint);
 
-        const detail: GameDetailDTO = { listing, publicData, rsvps, isHost };
+        const allCheckins = checkinRepo.getByGame(listing.listingId);
+        const checkins = isHost ? allCheckins : [];
+        const myCheckIn = me
+            ? allCheckins.find((c) => c.playerFingerprint === me.fingerprint)
+            : undefined;
+
+        const detail: GameDetailDTO = { listing, publicData, rsvps, checkins, myCheckIn, isHost };
 
         if (listing.encryptedDataBlob && keyring.isUnlocked()) {
             const privateKey = keyring.getPrivateKey();
@@ -219,5 +226,36 @@ export function registerIpcHandlers(): void {
         if (!listing) throw new Error("Listing not found");
         gameService.delete(listing.listingId);
         rsvpRepo.deleteByGame(listing.listingId);
+    });
+
+    // ─── Check-ins ──────────────────────────────────────────────────────
+    handle<HomeGamesAPI["checkins"]["createChallenge"]>("checkins:createChallenge", async (_e, gameListingId) => {
+        const { checkinService } = getServices();
+        return checkinService.createChallenge(gameListingId);
+    });
+
+    handle<HomeGamesAPI["checkins"]["signChallenge"]>("checkins:signChallenge", async (_e, challenge) => {
+        const { checkinService } = getServices();
+        return checkinService.signChallenge(challenge);
+    });
+
+    handle<HomeGamesAPI["checkins"]["verifyAndRecord"]>(
+        "checkins:verifyAndRecord",
+        async (_e, challenge, response) => {
+            const { checkinService, playerRepo } = getServices();
+            const checkin = await checkinService.verifyAndRecord(challenge, response);
+            const player = playerRepo.getByFingerprint(checkin.playerFingerprint);
+            let playerNickname: string | undefined;
+            if (player?.profileJson) {
+                try { playerNickname = (JSON.parse(player.profileJson) as { nickname?: string }).nickname; }
+                catch { /* ignore */ }
+            }
+            return { checkin, playerNickname } satisfies CheckInRecordedDTO;
+        }
+    );
+
+    handle<HomeGamesAPI["checkins"]["listForGame"]>("checkins:listForGame", async (_e, gameListingId) => {
+        const { checkinService } = getServices();
+        return checkinService.getForGame(gameListingId);
     });
 }

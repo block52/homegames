@@ -1,6 +1,7 @@
 import type Database from "better-sqlite3";
 import * as migration001 from "./001_initial.js";
 import * as migration002 from "./002_rsvp_note.js";
+import * as migration003 from "./003_checkins.js";
 
 interface Migration {
     version: number;
@@ -10,7 +11,8 @@ interface Migration {
 
 const migrations: Migration[] = [
     migration001,
-    migration002
+    migration002,
+    migration003
 ];
 
 export function runMigrations(db: Database.Database): void {

@@ -1,8 +1,11 @@
 import { useEffect, useState } from "react";
 import type { GameType } from "@homegames/core";
-import type { SearchResultDTO, GameDetailDTO } from "../../shared/api";
+import type { SearchResultDTO, GameDetailDTO, CheckInRecordedDTO } from "../../shared/api";
 import { shortFp, formatTime } from "../utils";
 import { UnlockModal } from "../components/UnlockModal";
+import { HostCheckInModal } from "../components/HostCheckInModal";
+import { PlayerCheckInModal } from "../components/PlayerCheckInModal";
+import { VouchPromptModal } from "../components/VouchPromptModal";
 
 const GAME_TYPES: GameType[] = ["holdem", "omaha", "plo", "mixed", "other"];
 
@@ -266,6 +269,9 @@ function GameDetailModal({
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [note, setNote] = useState("");
+    const [showHostCheckIn, setShowHostCheckIn] = useState(false);
+    const [showPlayerCheckIn, setShowPlayerCheckIn] = useState(false);
+    const [vouchPrompt, setVouchPrompt] = useState<CheckInRecordedDTO | null>(null);
 
     const load = async () => {
         const d = await window.homegames.games.show(listingId);
@@ -399,21 +405,55 @@ function GameDetailModal({
                             </div>
                         )}
 
+                        {detail.myCheckIn && (
+                            <div className="alert info">
+                                ✓ You're checked in as of {formatTime(detail.myCheckIn.recordedAt)}
+                            </div>
+                        )}
+
                         {error && <div className="alert error">{error}</div>}
 
-                        <div className="actions">
+                        <div className="actions" style={{ flexWrap: "wrap" }}>
                             <button type="button" onClick={onClose}>Close</button>
                             {detail.isHost ? (
-                                <button className="danger" onClick={cancel} disabled={busy}>Cancel listing</button>
-                            ) : !myRsvp ? (
-                                <button className="primary" onClick={rsvp} disabled={busy}>
-                                    {busy ? "RSVPing…" : "RSVP Yes"}
-                                </button>
-                            ) : null}
+                                <>
+                                    <button onClick={() => setShowHostCheckIn(true)}>Check players in</button>
+                                    <button className="danger" onClick={cancel} disabled={busy}>Cancel listing</button>
+                                </>
+                            ) : (
+                                <>
+                                    {!detail.myCheckIn && (
+                                        <button onClick={() => setShowPlayerCheckIn(true)}>Check in (in person)</button>
+                                    )}
+                                    {!myRsvp && (
+                                        <button className="primary" onClick={rsvp} disabled={busy}>
+                                            {busy ? "RSVPing…" : "RSVP Yes"}
+                                        </button>
+                                    )}
+                                </>
+                            )}
                         </div>
                     </>
                 )}
             </div>
+            {showHostCheckIn && detail && (
+                <HostCheckInModal
+                    listingId={listingId}
+                    onClose={() => { setShowHostCheckIn(false); load(); }}
+                    onCheckedIn={(rec) => setVouchPrompt(rec)}
+                />
+            )}
+            {showPlayerCheckIn && (
+                <PlayerCheckInModal onClose={() => { setShowPlayerCheckIn(false); load(); }} />
+            )}
+            {vouchPrompt && (
+                <VouchPromptModal
+                    playerFingerprint={vouchPrompt.checkin.playerFingerprint}
+                    playerNickname={vouchPrompt.playerNickname}
+                    onClose={() => setVouchPrompt(null)}
+                    onVouched={() => setVouchPrompt(null)}
+                />
+            )}
         </div>
     );
 }

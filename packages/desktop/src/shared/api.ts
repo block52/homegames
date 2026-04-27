@@ -6,7 +6,10 @@ import type {
     GameType,
     Vouch,
     TrustLevel,
-    RSVPRequest
+    RSVPRequest,
+    CheckIn,
+    CheckInChallenge,
+    CheckInResponse
 } from "@homegames/core";
 
 export interface IdentitySummary {
@@ -38,7 +41,14 @@ export interface GameDetailDTO {
     privateData?: GamePrivateData;
     privateDataError?: string;
     rsvps: RSVPRequest[];
+    checkins: CheckIn[];
+    myCheckIn?: CheckIn;
     isHost: boolean;
+}
+
+export interface CheckInRecordedDTO {
+    checkin: CheckIn;
+    playerNickname?: string;
 }
 
 export interface KeyringStatus {
@@ -78,6 +88,15 @@ export interface HomeGamesAPI {
         show: (listingId: string) => Promise<GameDetailDTO | null>;
         rsvp: (listingId: string, note?: string) => Promise<RSVPRequest>;
         cancel: (listingId: string) => Promise<void>;
+    };
+    checkins: {
+        createChallenge: (gameListingId: string) => Promise<CheckInChallenge>;
+        signChallenge: (challenge: CheckInChallenge) => Promise<CheckInResponse>;
+        verifyAndRecord: (
+            challenge: CheckInChallenge,
+            response: CheckInResponse
+        ) => Promise<CheckInRecordedDTO>;
+        listForGame: (gameListingId: string) => Promise<CheckIn[]>;
     };
 }
 

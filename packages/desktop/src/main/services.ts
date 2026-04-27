@@ -5,12 +5,14 @@ import {
     VouchRepository,
     GameRepository,
     RSVPRepository,
+    CheckInRepository,
     LocalIdentityRepository,
     ConfigRepository,
     TrustEngine,
     VouchService,
     GameService,
-    RSVPService
+    RSVPService,
+    CheckInService
 } from "@homegames/core";
 
 export interface AppServices {
@@ -20,12 +22,14 @@ export interface AppServices {
     vouchRepo: VouchRepository;
     gameRepo: GameRepository;
     rsvpRepo: RSVPRepository;
+    checkinRepo: CheckInRepository;
     identityRepo: LocalIdentityRepository;
     configRepo: ConfigRepository;
     trustEngine: TrustEngine;
     vouchService: VouchService;
     gameService: GameService;
     rsvpService: RSVPService;
+    checkinService: CheckInService;
 }
 
 let cached: AppServices | null = null;
@@ -41,12 +45,14 @@ export function getServices(): AppServices {
     const vouchRepo = new VouchRepository(conn);
     const gameRepo = new GameRepository(conn);
     const rsvpRepo = new RSVPRepository(conn);
+    const checkinRepo = new CheckInRepository(conn);
     const identityRepo = new LocalIdentityRepository(conn);
     const configRepo = new ConfigRepository(conn);
     const trustEngine = new TrustEngine(vouchRepo, playerRepo);
     const vouchService = new VouchService(vouchRepo, playerRepo, keyring);
     const gameService = new GameService(gameRepo, playerRepo, trustEngine, keyring);
     const rsvpService = new RSVPService(rsvpRepo, gameRepo, playerRepo, keyring);
+    const checkinService = new CheckInService(checkinRepo, gameRepo, playerRepo, keyring);
 
     cached = {
         db,
@@ -55,12 +61,14 @@ export function getServices(): AppServices {
         vouchRepo,
         gameRepo,
         rsvpRepo,
+        checkinRepo,
         identityRepo,
         configRepo,
         trustEngine,
         vouchService,
         gameService,
-        rsvpService
+        rsvpService,
+        checkinService
     };
     return cached;
 }

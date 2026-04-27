@@ -1,4 +1,4 @@
-import { app, BrowserWindow, shell } from "electron";
+import { app, BrowserWindow, session, shell } from "electron";
 import { join } from "path";
 import { registerIpcHandlers } from "./ipc.js";
 import { shutdownServices } from "./services.js";
@@ -34,6 +34,13 @@ function createWindow(): BrowserWindow {
 }
 
 app.whenReady().then(() => {
+    // Allow webcam access for QR-code check-in scanning. Renderer is
+    // sandboxed to local resources by CSP, so the only camera-using
+    // surface is our own UI.
+    session.defaultSession.setPermissionRequestHandler((_webContents, permission, callback) => {
+        callback(permission === "media");
+    });
+
     registerIpcHandlers();
     createWindow();
 
