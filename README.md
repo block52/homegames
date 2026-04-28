@@ -1,4 +1,4 @@
-# HomeGames
+# p2p.poker => Find your local home game.
 
 P2P home poker game discovery platform with Web of Trust.
 
