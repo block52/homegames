@@ -50,10 +50,10 @@ app.whenReady().then(() => {
 });
 
 app.on("window-all-closed", () => {
-    shutdownServices();
+    shutdownServices().catch(() => { /* ignore */ });
     if (process.platform !== "darwin") app.quit();
 });
 
 app.on("before-quit", () => {
-    shutdownServices();
+    shutdownServices().catch(() => { /* ignore */ });
 });

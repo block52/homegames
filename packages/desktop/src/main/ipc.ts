@@ -7,7 +7,9 @@ import {
     searchListings,
     timestampNow,
     GamePublicData,
-    GameListing
+    GameListing,
+    NetworkService,
+    NetworkStatus
 } from "@homegames/core";
 import { getServices } from "./services.js";
 import type {
@@ -18,7 +20,9 @@ import type {
     KeyringStatus,
     CheckInRecordedDTO,
     PeerImportPreview,
-    PeerImportResult
+    PeerImportResult,
+    NetworkStatusDTO,
+    NetworkStateLabel
 } from "../shared/api.js";
 
 const KEYS_OPENPGP_BASE = "https://keys.openpgp.org/vks/v1/by-fingerprint/";
@@ -352,5 +356,82 @@ export function registerIpcHandlers(): void {
     handle<HomeGamesAPI["checkins"]["listForGame"]>("checkins:listForGame", async (_e, gameListingId) => {
         const { checkinService } = getServices();
         return checkinService.getForGame(gameListingId);
+    });
+
+    // ─── Network ────────────────────────────────────────────────────────
+    function readStatus(): NetworkStatusDTO {
+        const services = getServices();
+        const svc = services.networkService;
+        if (!svc) {
+            return {
+                state: services.networkLastError ? "error" : "disconnected",
+                destinationBase32: null,
+                destinationBase64: null,
+                peerCount: 0,
+                lastError: services.networkLastError
+            };
+        }
+        const dest = svc.getDestination();
+        const raw = svc.getStatus();
+        const state: NetworkStateLabel =
+            raw === NetworkStatus.CONNECTED ? "connected"
+            : raw === NetworkStatus.CONNECTING ? "connecting"
+            : raw === NetworkStatus.ERROR ? "error"
+            : "disconnected";
+        return {
+            state,
+            destinationBase32: dest?.base32 ?? null,
+            destinationBase64: dest?.base64 ?? null,
+            peerCount: svc.getConnectedPeerCount(),
+            lastError: services.networkLastError
+        };
+    }
+
+    handle<HomeGamesAPI["network"]["status"]>("network:status", async () => readStatus());
+
+    handle<HomeGamesAPI["network"]["start"]>("network:start", async () => {
+        const services = getServices();
+        if (services.networkService) return readStatus();
+
+        const { keyring, identityRepo, db, gameService, rsvpService } = services;
+        const me = identityRepo.get();
+        if (!me) throw new Error("No identity. Create one first.");
+        if (!keyring.isUnlocked()) {
+            throw new Error("Identity is locked. Unlock to start the network.");
+        }
+        const privateKey = keyring.getPrivateKey();
+        if (!privateKey) throw new Error("No private key in keyring.");
+
+        services.setNetworkLastError(null);
+        const svc = new NetworkService(db.getConnection());
+        svc.setKeys(me.fingerprint, privateKey, me.publicKey);
+
+        // Surface async errors (i2pd not running, lost connection)
+        // through the cached lastError so the sidebar polling can show them.
+        svc.on("error", (err: Error) => {
+            services.setNetworkLastError(err.message);
+        });
+
+        try {
+            await svc.start();
+            svc.attachGameHandler(gameService, rsvpService, keyring);
+            services.setNetworkService(svc);
+        } catch (err) {
+            services.setNetworkLastError((err as Error).message);
+            await svc.stop().catch(() => { /* ignore */ });
+            throw err;
+        }
+        return readStatus();
+    });
+
+    handle<HomeGamesAPI["network"]["stop"]>("network:stop", async () => {
+        const services = getServices();
+        const svc = services.networkService;
+        if (svc) {
+            await svc.stop();
+            services.setNetworkService(null);
+        }
+        services.setNetworkLastError(null);
+        return readStatus();
     });
 }
